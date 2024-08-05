@@ -4,11 +4,11 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:input_quantity/src/floating_point.dart';
 import 'package:input_quantity/src/constant.dart';
 import 'package:input_quantity/src/decoration_props.dart';
 import 'package:input_quantity/src/form_props.dart';
+import 'package:input_quantity/src/input_qty_profiler.dart';
 
 import 'build_btn.dart';
 
@@ -78,6 +78,8 @@ class InputQty extends StatefulWidget {
   /// this value will use to limit number of decimal places
   final int decimalPlaces;
 
+  final InputQtyProfiler profiler;
+
   /// Widget to handle quantity input
   ///
   /// for specific output, use `InputQty.int` or
@@ -91,6 +93,7 @@ class InputQty extends StatefulWidget {
     this.steps = 1,
     this.decimalPlaces = 18,
     this.onQtyChanged,
+    this.profiler = const DefaultQtyProfiler(),
     this.messageBuilder,
     this.validator,
     this.decoration = const QtyDecorationProps(),
@@ -133,6 +136,7 @@ class InputQty extends StatefulWidget {
     this.decoration = const QtyDecorationProps(),
     this.qtyFormProps = const QtyFormProps(),
     this.isIntrinsicWidth = true,
+    this.profiler = const DefaultQtyProfiler(),
     @Deprecated(
         'Use messageBuilder from QtyDecorationProps to specify message widget'
         'This feature was deprecated after v2.0.0')
@@ -167,6 +171,7 @@ class InputQty extends StatefulWidget {
     this.decimalPlaces = 0,
     this.onQtyChanged,
     this.messageBuilder,
+    this.profiler = const DefaultQtyProfiler(),
     this.validator,
     this.decoration = const QtyDecorationProps(),
     this.qtyFormProps = const QtyFormProps(),
@@ -210,11 +215,14 @@ class _InputQtyState extends State<InputQty> {
   /// decimal place steps
   int stepDecimalPlace = 0;
 
+  set valCtrlText(String val) =>
+      _valCtrl.text = widget.profiler.toDisplayValue(val);
+
   @override
   void initState() {
     super.initState();
     currentval = ValueNotifier(widget.initVal);
-    _valCtrl.text = "${widget.initVal}";
+    valCtrlText = "${widget.initVal}";
     if (widget._outputType != _OutputType.integer) {
       stepDecimalPlace = countDecimalPlaces(widget.steps);
     }
@@ -227,7 +235,7 @@ class _InputQtyState extends State<InputQty> {
   /// then firstly, it set the [value]= [initVal],
   /// after that [value] += [steps]
   void plus() {
-    num value = num.tryParse(_valCtrl.text) ?? widget.initVal;
+    num value = widget.profiler.tryParse(_valCtrl.text) ?? widget.initVal;
     int decimalpl = 0;
     if (widget._outputType == _OutputType.integer) {
       value += widget.steps;
@@ -255,7 +263,7 @@ class _InputQtyState extends State<InputQty> {
     }
 
     /// set back to the controller
-    _valCtrl.text = value.toStringAsFixed(decimalpl);
+    valCtrlText = value.toStringAsFixed(decimalpl);
     currentval.value = value;
     widget.onQtyChanged?.call(value);
   }
@@ -277,7 +285,7 @@ class _InputQtyState extends State<InputQty> {
   /// then firstly, it set the [value]= [initVal],
   /// after that [value] -= [steps]
   void minus() {
-    num value = num.tryParse(_valCtrl.text) ?? widget.initVal;
+    num value = widget.profiler.tryParse(_valCtrl.text) ?? widget.initVal;
     // value -= widget.steps;
     int decimalpl = 0;
 
@@ -305,7 +313,7 @@ class _InputQtyState extends State<InputQty> {
     }
 
     /// set back to the controller
-    _valCtrl.text = value.toStringAsFixed(decimalpl);
+    valCtrlText = value.toStringAsFixed(decimalpl);
     currentval.value = value;
     widget.onQtyChanged?.call(value);
   }
@@ -465,7 +473,8 @@ class _InputQtyState extends State<InputQty> {
         controller: _valCtrl,
         readOnly: !widget.qtyFormProps.enableTyping,
         autovalidateMode: AutovalidateMode.onUserInteraction,
-        validator: (val) => widget.validator?.call(num.tryParse(val ?? '')),
+        validator: (val) =>
+            widget.validator?.call(widget.profiler.tryParse(val ?? '')),
         textAlign: widget.qtyFormProps.textAlign,
         textAlignVertical: widget.qtyFormProps.textAlignVertical,
         style: widget.qtyFormProps.style,
@@ -480,21 +489,21 @@ class _InputQtyState extends State<InputQty> {
         enabled: widget.qtyFormProps.enabled,
         showCursor: widget.qtyFormProps.showCursor,
         inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\-?\d*'))
+          ...widget.profiler.inputFormatters,
         ],
         onChanged: (String strVal) {
           if (widget._outputType == _OutputType.integer &&
               strVal.contains('.')) {
-            _valCtrl.text = '${currentval.value}';
+            valCtrlText = '${currentval.value}';
             _valCtrl.selection = TextSelection.fromPosition(
                 TextPosition(offset: _valCtrl.text.length));
             return;
           }
           // avoid parsing value
           if (strVal.isEmpty || strVal == '-') return;
-          num? temp = num.tryParse(strVal);
+          num? temp = widget.profiler.tryParse(strVal);
           if (temp == null) {
-            _valCtrl.text = '${currentval.value}';
+            valCtrlText = '${currentval.value}';
             _valCtrl.selection = TextSelection.fromPosition(
                 TextPosition(offset: _valCtrl.text.length));
             return;
@@ -515,11 +524,11 @@ class _InputQtyState extends State<InputQty> {
           if (temp >= widget.maxVal) {
             temp = widget.maxVal;
 
-            _valCtrl.text = "$temp";
+            valCtrlText = "$temp";
           } else if (temp < widget.minVal) {
             temp = widget.minVal;
 
-            _valCtrl.text = "$temp";
+            valCtrlText = "$temp";
           }
           widget.onQtyChanged?.call(temp);
           currentval.value = temp;
