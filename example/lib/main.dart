@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:input_quantity/input_quantity.dart';
 // import 'package:input_quantity/input_quantity.dart';
 
@@ -68,6 +69,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       initVal: 10,
                       steps: 10,
                       minVal: -50,
+                      profiler: ArabicInputQtyProfiler(),
                       qtyFormProps: QtyFormProps(enableTyping: false),
                       decoration: QtyDecorationProps(
                         isBordered: false,
@@ -91,6 +93,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     InputQty(
+                        profiler: ArabicInputQtyProfiler(),
                         decoration: QtyDecorationProps(
                             isBordered: false,
                             borderShape: BorderShapeBtn.circle,
@@ -112,6 +115,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             padding: EdgeInsets.all(8.0),
                             child: Text('Use validator')),
                         InputQty(
+                          profiler: const ArabicInputQtyProfiler(),
                           initVal: 0,
                           steps: 10,
                           minVal: -100,
@@ -140,6 +144,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           ),
                         ),
                         InputQty(
+                          profiler: const ArabicInputQtyProfiler(),
                           initVal: 0,
                           minVal: -100,
                           maxVal: 100,
@@ -181,6 +186,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         InputQty.int(
                           initVal: 0,
                           steps: 10,
+                          profiler: ArabicInputQtyProfiler(),
                           minVal: -100,
                         ),
                       ],
@@ -207,6 +213,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           minVal: -100.0,
                           maxVal: 100.0,
                           steps: 0.1,
+                          profiler: ArabicInputQtyProfiler(),
                         ),
                       ],
                     ),
@@ -221,6 +228,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   constraints: const BoxConstraints(maxWidth: 200),
                   child: InputQty(
                     isIntrinsicWidth: false,
+                    profiler: const ArabicInputQtyProfiler(),
                     qtyFormProps: const QtyFormProps(),
                     decoration: QtyDecorationProps(
                         qtyStyle: QtyStyle.btnOnRight,
@@ -259,6 +267,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     InputQty.int(
+                      profiler: const ArabicInputQtyProfiler(),
                       messageBuilder: (minVal, maxVal, value) => const Text(
                           "Button on Left",
                           textAlign: TextAlign.center),
@@ -270,6 +279,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           borderShape: BorderShapeBtn.square),
                     ),
                     InputQty.int(
+                      profiler: const ArabicInputQtyProfiler(),
                       messageBuilder: (minVal, maxVal, value) => const Text(
                           "Button on Right",
                           textAlign: TextAlign.center),
@@ -286,10 +296,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
                 const SizedBox(height: 30),
                 const InputQty(
+                  profiler: ArabicInputQtyProfiler(),
                   decoration: QtyDecorationProps(
                       orientation: ButtonOrientation.vertical),
                 ),
                 InputQty.int(
+                  profiler: const ArabicInputQtyProfiler(),
                   messageBuilder: (minVal, maxVal, value) =>
                       const Text("Classic", textAlign: TextAlign.center),
                   decoration: const QtyDecorationProps(
@@ -304,6 +316,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     InputQty.int(
+                      profiler: const ArabicInputQtyProfiler(),
                       messageBuilder: (minVal, maxVal, value) => const Text(
                           "Button on Right Horizontal",
                           textAlign: TextAlign.center),
@@ -317,6 +330,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           borderShape: BorderShapeBtn.square),
                     ),
                     InputQty.int(
+                      profiler: const ArabicInputQtyProfiler(),
                       messageBuilder: (minVal, maxVal, value) => const Text(
                           "Button on Right Horizontal",
                           textAlign: TextAlign.center),
@@ -346,4 +360,63 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
+}
+
+class ArabicInputQtyProfiler extends InputQtyProfiler {
+  const ArabicInputQtyProfiler();
+  @override
+  num? tryParse(String value) {
+    final arEn = _arabicToEnglishNumbers(value);
+    final enParsed = num.tryParse(arEn);
+    return enParsed ?? 0;
+  }
+
+  @override
+  List<TextInputFormatter> get inputFormatters => [ArabicDigitsFormatter()];
+
+  @override
+  String toDisplayValue(String stringAsFixed) {
+    return _englishToArabicNumbers(stringAsFixed);
+  }
+}
+
+class ArabicDigitsFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+   
+    final output = _englishToArabicNumbers(newValue.text);
+    return TextEditingValue(
+      text: output,
+      selection: TextSelection.collapsed(offset: output.length),
+    );
+  }
+}
+
+String _englishToArabicNumbers(String input) {
+  return input
+      .replaceAll('0', '٠')
+      .replaceAll('1', '١')
+      .replaceAll('2', '٢')
+      .replaceAll('3', '٣')
+      .replaceAll('4', '٤')
+      .replaceAll('5', '٥')
+      .replaceAll('6', '٦')
+      .replaceAll('7', '٧')
+      .replaceAll('8', '٨')
+      .replaceAll('9', '٩');
+}
+
+String _arabicToEnglishNumbers(String input) {
+  return input
+      .replaceAll('٠', '0')
+      .replaceAll('١', '1')
+      .replaceAll('٢', '2')
+      .replaceAll('٣', '3')
+      .replaceAll('٤', '4')
+      .replaceAll('٥', '5')
+      .replaceAll('٦', '6')
+      .replaceAll('٧', '7')
+      .replaceAll('٨', '8')
+      .replaceAll('٩', '9');
 }
